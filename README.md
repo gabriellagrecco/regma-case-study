@@ -3,12 +3,12 @@
 **Plataforma de operação para agências de marketing e profissionais que gerenciam clientes e conteúdo.**
 
 Centraliza CRM, planejamento editorial, aprovação de conteúdo pelo cliente, WhatsApp, automações
-e e-mail marketing em um só lugar — com o cliente final aprovando conteúdo pelo celular, sem
+e e-mail marketing em um só lugar, com o cliente final aprovando conteúdo pelo celular, sem
 precisar aprender ferramenta nova.
 
 > **Sobre este repositório:** o Regma é um produto comercial e o **código-fonte é privado**.
 > Este espaço documenta o problema, a arquitetura e as decisões técnicas do projeto.
-> Acesso ao código pode ser concedido pontualmente em processos seletivos — é só pedir.
+> Acesso ao código pode ser concedido pontualmente em processos seletivos, é só pedir.
 
 `Next.js 16` · `TypeScript` · `PostgreSQL` · `Prisma` · `Supabase` · `Vercel` · `Claude API` · `Evolution API`
 
@@ -22,10 +22,10 @@ A palavra "cliente" aparece com dois sentidos no produto, então vale separar:
 
 | | Quem é | O que faz no Regma |
 |---|---|---|
-| **Agência** | O cliente do Regma — quem assina | Opera tudo: CRM, planejamento, produção, financeiro |
+| **Agência** | O cliente do Regma, quem assina | Opera tudo: CRM, planejamento, produção, financeiro |
 | **Cliente da agência** | Quem contrata a agência | Entra só no portal: vê, aprova e comenta o conteúdo pelo celular |
 
-Essa distinção não é vocabulário — é a decisão de arquitetura mais importante do sistema. Ver
+Essa distinção não é vocabulário, é a decisão de arquitetura mais importante do sistema. Ver
 [três camadas de identidade](#três-camadas-de-identidade-de-propósito).
 
 ---
@@ -37,7 +37,7 @@ aprovação do cliente vira uma thread de WhatsApp sem rastro, e o comercial mor
 Ninguém sabe qual conteúdo está aprovado sem procurar.
 
 Eu vivi isso operando conteúdo para clientes. Cheguei a usar Notion para acompanhar, mas a
-maioria dos clientes não conseguia usar — principalmente na etapa que mais importa, a aprovação.
+maioria dos clientes não conseguia usar, principalmente na etapa que mais importa, a aprovação.
 Cliente não quer aprender ferramenta: quer abrir o celular, ver o post e dizer sim ou não.
 
 O Regma nasceu dessa dor específica: **centralizar a operação da agência sem transferir
@@ -97,26 +97,26 @@ os doze que sustentam o fluxo principal.
 
 ```mermaid
 erDiagram
-    AGENCIA   ||--o{ CLIENTE        : atende
-    AGENCIA   ||--o{ ESTAGIO        : define
-    AGENCIA   ||--o{ MEMBRO_TIME    : tem
-    AGENCIA   ||--o{ LANCAMENTO     : registra
-    ESTAGIO   ||--o{ CLIENTE        : classifica
-    CLIENTE   ||--o{ EVENTO_ESTAGIO : gera
-    CLIENTE   ||--o{ MENSAGEM       : troca
-    CLIENTE   ||--o{ PLANO          : possui
-    PLANO     ||--o{ SECAO          : contem
+    AGENCIA   ||--o{ CLIENTE: atende
+    AGENCIA   ||--o{ ESTAGIO: define
+    AGENCIA   ||--o{ MEMBRO_TIME: tem
+    AGENCIA   ||--o{ LANCAMENTO: registra
+    ESTAGIO   ||--o{ CLIENTE: classifica
+    CLIENTE   ||--o{ EVENTO_ESTAGIO: gera
+    CLIENTE   ||--o{ MENSAGEM: troca
+    CLIENTE   ||--o{ PLANO: possui
+    PLANO     ||--o{ SECAO: contem
     PLANO     ||--o{ LINHA_EDITORIAL: define
-    PLANO     ||--o{ ITEM_EDITORIAL : agenda
-    ITEM_EDITORIAL ||--o{ TAREFA    : desdobra
-    CONVERSA_WA    ||--o{ MSG_WA    : contem
+    PLANO     ||--o{ ITEM_EDITORIAL: agenda
+    ITEM_EDITORIAL ||--o{ TAREFA: desdobra
+    CONVERSA_WA    ||--o{ MSG_WA: contem
 ```
 
 **O eixo do sistema é `Agência → Cliente → Plano → Item Editorial`.** Toda a operação pendura
 nesse caminho: o CRM entra por `Estágio`, a produção por `Tarefa`, a aprovação acontece no
 `Item Editorial`, e o WhatsApp conecta conversa a cliente.
 
-Escopo por agência é aplicado no schema — cada entidade de topo carrega o vínculo com a agência
+Escopo por agência é aplicado no schema: cada entidade de topo carrega o vínculo com a agência
 dona, e nenhuma consulta atravessa esse limite.
 
 ---
@@ -125,18 +125,18 @@ dona, e nenhuma consulta atravessa esse limite.
 
 ### Três camadas de identidade, de propósito
 
-A agência autentica por NextAuth. O cliente final tem sessão própria com senha — porque ele
+A agência autentica por NextAuth. O cliente final tem sessão própria com senha: porque ele
 **não deve existir como usuário da plataforma**: não vê o painel, não ocupa assento, não tem
 permissão a gerenciar. E os links por token servem para quem precisa ver ou responder uma coisa
 só, sem criar conta.
 
 Unificar tudo num sistema de auth seria mais simples de construir e pior de usar. A fronteira
-entre "quem opera" e "quem aprova" é de produto, não de implementação — e ficou explícita na
+entre "quem opera" e "quem aprova" é de produto, não de implementação: e ficou explícita na
 arquitetura em vez de virar checagem de papel espalhada por cada tela.
 
 ### O WhatsApp é um servidor auto-hospedado, por conta de margem
 
-A primeira versão foi um motor próprio com Baileys, rodando local. Funcionava — e caía toda vez
+A primeira versão foi um motor próprio com Baileys, rodando local. Funcionava: e caía toda vez
 que a máquina desligava. Sessão persistente de WhatsApp precisa de um host que não durma, e isso
 não é resolvível com esforço: é requisito de infraestrutura.
 
@@ -150,19 +150,19 @@ Hoje é um servidor **Evolution auto-hospedado**, com uma instância por conta e
 apontando de volta para a aplicação.
 
 **Trade-off:** infraestrutura própria para monitorar, em troca de um custo que não cresce com a
-base. Foi a decisão de custo unitário que determinou a arquitetura — não o contrário.
+base. Foi a decisão de custo unitário que determinou a arquitetura, não o contrário.
 
 ---
 
 ## Como as proteções apareceram
 
 Nenhuma das proteções abaixo nasceu de checklist. Elas vieram de um hábito: a cada frente
-entregue, submeter o próprio código a uma **revisão adversarial feita com IA** — a pergunta não
+entregue, submeter o próprio código a uma **revisão adversarial feita com IA**: a pergunta não
 era "está funcionando?", e sim *"como alguém quebraria isso?"*.
 
 A IA levantava os candidatos. **A triagem era minha:** o que era achado real e o que era falso
 positivo, o que era grave e o que podia esperar, e em que ordem corrigir. O histórico do
-repositório mostra o padrão — rodadas de varredura seguidas de commits que fecham os achados por
+repositório mostra o padrão: rodadas de varredura seguidas de commits que fecham os achados por
 severidade, dos graves primeiro.
 
 Foi numa dessas rodadas que apareceu a falha de **segurança entre contas** que originou a regra
@@ -171,7 +171,7 @@ o produto funcionava perfeitamente para quem não estivesse tentando invadir o v
 
 Vale dizer o que isso significa na prática: **as proteções não estão aqui porque eu sabia que
 precisava delas.** Estão porque eu procurei o que estava errado depois de achar que tinha
-terminado — e achei.
+terminado, e achei.
 
 ---
 
@@ -179,10 +179,10 @@ terminado — e achei.
 
 Decisões tomadas durante a construção:
 
-- **Segredos nunca versionados** — `.env*` ignorado desde o início; em 285 commits, nenhum
+- **Segredos nunca versionados**, `.env*` ignorado desde o início; em 285 commits, nenhum
   arquivo de ambiente ou chave entrou no repositório
 - **Chave de serviço só no servidor**, nunca exposta ao cliente
-- **Dados pessoais fora do código** — a lista de acesso vive em variável de ambiente, e falha
+- **Dados pessoais fora do código**, a lista de acesso vive em variável de ambiente, e falha
   fechada se não estiver definida
 - **Senha com bcrypt**, nunca em texto puro
 - **Limite de tentativas de login** por identificador e IP
@@ -213,7 +213,7 @@ E, no multi-inquilino, a superfície mais perigosa é o vizinho:
 /**
  * REGRA DE OURO: o nome da instância é SEMPRE derivado do dataId da sessão,
  * nunca lido do banco. O nome é previsível (`regma_<dataId>`), então confiar num
- * campo gravável deixaria um inquilino apontar para a conexão de outro — e
+ * campo gravável deixaria um inquilino apontar para a conexão de outro: e
  * enviar mensagem pelo número alheio ou pedir o QR dele.
  */
 ```
@@ -226,7 +226,7 @@ isso, uma agência poderia sequestrar a conexão de WhatsApp de outra.
 - [ ] Auditoria das políticas de acesso ao storage
 - [ ] Revisão de expiração e escopo dos links por token
 
-O escopo por usuário está aplicado no schema, mas ainda não foi auditado ponta a ponta — e
+O escopo por usuário está aplicado no schema, mas ainda não foi auditado ponta a ponta: e
 enquanto isso não acontecer, não entra em uso com dado real de cliente.
 
 ---
@@ -239,4 +239,4 @@ segurança acima e o lançamento.
 ---
 
 **Gabriella Grecco** · [LinkedIn](https://linkedin.com/in/gabriellagrecco)
-Código-fonte privado — acesso mediante solicitação.
+Código-fonte privado, acesso mediante solicitação.

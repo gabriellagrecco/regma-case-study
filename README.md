@@ -1,242 +1,248 @@
 # Regma
 
-**Plataforma de operação para agências de marketing e profissionais que gerenciam clientes e conteúdo.**
+🇺🇸 English · [🇧🇷 Português](README.pt-BR.md)
 
-Centraliza CRM, planejamento editorial, aprovação de conteúdo pelo cliente, WhatsApp, automações
-e e-mail marketing em um só lugar, com o cliente final aprovando conteúdo pelo celular, sem
-precisar aprender ferramenta nova.
+**An operations platform for marketing agencies and the people who manage clients and content.**
 
-> **Sobre este repositório:** o Regma é um produto comercial e o **código-fonte é privado**.
-> Este espaço documenta o problema, a arquitetura e as decisões técnicas do projeto.
-> Acesso ao código pode ser concedido pontualmente em processos seletivos, é só pedir.
+It brings CRM, editorial planning, client content approval, WhatsApp, automations and email
+marketing into one place, with the agency's own client approving content from their phone,
+without having to learn a new tool.
+
+> **About this repository:** Regma is a commercial product and the **source code is private**.
+> This space documents the problem, the architecture and the technical decisions behind it.
+> Code access can be granted case by case during a hiring process, just ask.
 
 `Next.js 16` · `TypeScript` · `PostgreSQL` · `Prisma` · `Supabase` · `Vercel` · `Claude API` · `Evolution API`
 
-**Em implantação na primeira operação real.**
+**Rolling out with its first real operation.**
 
 ---
 
-## Quem é quem
+## Who is who
 
-A palavra "cliente" aparece com dois sentidos no produto, então vale separar:
+The word "client" carries two meanings inside the product, so it is worth separating them:
 
-| | Quem é | O que faz no Regma |
+| | Who they are | What they do in Regma |
 |---|---|---|
-| **Agência** | O cliente do Regma, quem assina | Opera tudo: CRM, planejamento, produção, financeiro |
-| **Cliente da agência** | Quem contrata a agência | Entra só no portal: vê, aprova e comenta o conteúdo pelo celular |
+| **Agency** | Regma's customer, the one who subscribes | Runs everything: CRM, planning, production, finance |
+| **The agency's client** | The company that hires the agency | Enters the portal only: views, approves and comments on content from their phone |
 
-Essa distinção não é vocabulário, é a decisão de arquitetura mais importante do sistema. Ver
-[três camadas de identidade](#três-camadas-de-identidade-de-propósito).
-
----
-
-## O problema
-
-Agência de marketing opera espalhada. O planejamento fica num lugar, o calendário em outro, a
-aprovação do cliente vira uma thread de WhatsApp sem rastro, e o comercial mora numa planilha.
-Ninguém sabe qual conteúdo está aprovado sem procurar.
-
-Eu vivi isso operando conteúdo para clientes. Cheguei a usar Notion para acompanhar, mas a
-maioria dos clientes não conseguia usar, principalmente na etapa que mais importa, a aprovação.
-Cliente não quer aprender ferramenta: quer abrir o celular, ver o post e dizer sim ou não.
-
-O Regma nasceu dessa dor específica: **centralizar a operação da agência sem transferir
-complexidade para o cliente.**
+That distinction is not vocabulary, it is the most important architectural decision in the
+system. See [three identity layers](#three-identity-layers-on-purpose).
 
 ---
 
-## Escopo construído
+## The problem
 
-| Área | O que faz |
+A marketing agency operates scattered. Planning lives in one place, the calendar in another,
+client approval turns into a WhatsApp thread with no record, and sales lives in a spreadsheet.
+Nobody knows which piece of content is approved without going looking for it.
+
+I lived this while running content for clients. I even used Notion to keep track, but most
+clients could not use it, above all at the step that matters most, approval. A client does not
+want to learn a tool: they want to open their phone, see the post and say yes or no.
+
+Regma came out of that specific pain: **centralize the agency's operation without pushing
+complexity onto the client.**
+
+---
+
+## What is built
+
+| Area | What it does |
 |---|---|
-| **CRM** | Pipeline por estágio, temperatura de lead, histórico de atividade, importação de contatos |
-| **Editorial** | Linhas editoriais, planos de conteúdo, calendário, tarefas e feed de produção |
-| **Portal do cliente** | Área própria para ver, aprovar e comentar conteúdo pelo celular |
-| **WhatsApp** | Caixa de conversas, mídia, fila de disparo, conversão de conversa em lead |
-| **IA** | Geração de pautas, sugestão por seção, resumo de reunião, briefing a partir de transcrição |
-| **Campanhas** | E-mail com domínio remetente, supressão, webhooks de retorno |
-| **Automação** | Regras, fluxos, enrolamento de contatos e processamento agendado |
+| **CRM** | Pipeline by stage, lead temperature, activity history, contact import |
+| **Editorial** | Editorial lines, content plans, calendar, tasks and a production feed |
+| **Client portal** | A space of its own to view, approve and comment on content from a phone |
+| **WhatsApp** | Conversation inbox, media, send queue, converting a conversation into a lead |
+| **AI** | Content idea generation, per-section suggestions, meeting summaries, briefings from a transcript |
+| **Campaigns** | Email with a sender domain, suppression, delivery webhooks |
+| **Automation** | Rules, flows, contact enrollment and scheduled processing |
 
-Desenvolvimento solo. **285 commits · ~41 mil linhas · 59 modelos de dados.**
+Solo development. **285 commits · ~41k lines · 59 data models.**
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Next.js 16 (App Router) · TypeScript · Vercel           │
 │                                                          │
-│  /(app)    painel da agência      → sessão NextAuth      │
-│  /cliente  portal do cliente      → sessão própria       │
-│  /u /f /briefing  links públicos  → acesso por token     │
-│  /api      ~70 rotas                                     │
+│  /(app)    agency dashboard       → NextAuth session     │
+│  /cliente  client portal          → its own session      │
+│  /u /f /briefing  public links    → token access         │
+│  /api      ~70 routes                                    │
 └───────┬──────────────────┬──────────────────┬────────────┘
         │                  │                  │
    ┌────▼─────┐      ┌─────▼──────┐   ┌───────▼──────────┐
-   │ Postgres │      │  Supabase  │   │ Servidor Evolution│
-   │ (Prisma) │      │  Storage   │   │ auto-hospedado    │
-   │59 modelos│      │  arquivos  │   │ 1 instância/conta │
+   │ Postgres │      │  Supabase  │   │ Evolution server │
+   │ (Prisma) │      │  Storage   │   │ self-hosted      │
+   │59 models │      │  files     │   │ 1 instance/acct  │
    └──────────┘      └────────────┘   └───────┬──────────┘
                                               │ webhook
    ┌──────────────────┐  ┌───────────────┐    ▼
    │ Claude (Sonnet)  │  │  Google APIs  │  WhatsApp
    └──────────────────┘  └───────────────┘
 
-                Vercel Cron (diário) → processamento de fila
+                Vercel Cron (daily) → queue processing
 ```
 
-As decisões por trás desse desenho estão em **[docs/decisoes-tecnicas.md](docs/decisoes-tecnicas.md)**.
+The reasoning behind this shape lives in
+**[docs/technical-decisions.md](docs/technical-decisions.md)**.
 
 ---
 
-## Modelo de dados
+## Data model
 
-As entidades centrais e como se relacionam. O schema completo tem **59 modelos**; abaixo estão
-os doze que sustentam o fluxo principal.
+The core entities and how they relate. The full schema has **59 models**; below are the twelve
+that carry the main flow.
 
 ```mermaid
 erDiagram
-    AGENCIA   ||--o{ CLIENTE: atende
-    AGENCIA   ||--o{ ESTAGIO: define
-    AGENCIA   ||--o{ MEMBRO_TIME: tem
-    AGENCIA   ||--o{ LANCAMENTO: registra
-    ESTAGIO   ||--o{ CLIENTE: classifica
-    CLIENTE   ||--o{ EVENTO_ESTAGIO: gera
-    CLIENTE   ||--o{ MENSAGEM: troca
-    CLIENTE   ||--o{ PLANO: possui
-    PLANO     ||--o{ SECAO: contem
-    PLANO     ||--o{ LINHA_EDITORIAL: define
-    PLANO     ||--o{ ITEM_EDITORIAL: agenda
-    ITEM_EDITORIAL ||--o{ TAREFA: desdobra
-    CONVERSA_WA    ||--o{ MSG_WA: contem
+    AGENCY   ||--o{ CLIENT: serves
+    AGENCY   ||--o{ STAGE: defines
+    AGENCY   ||--o{ TEAM_MEMBER: has
+    AGENCY   ||--o{ FINANCE_ENTRY: records
+    STAGE    ||--o{ CLIENT: classifies
+    CLIENT   ||--o{ STAGE_EVENT: generates
+    CLIENT   ||--o{ MESSAGE: exchanges
+    CLIENT   ||--o{ PLAN: owns
+    PLAN     ||--o{ SECTION: contains
+    PLAN     ||--o{ EDITORIAL_LINE: defines
+    PLAN     ||--o{ EDITORIAL_ITEM: schedules
+    EDITORIAL_ITEM ||--o{ TASK: breaks into
+    WA_CHAT        ||--o{ WA_MESSAGE: contains
 ```
 
-**O eixo do sistema é `Agência → Cliente → Plano → Item Editorial`.** Toda a operação pendura
-nesse caminho: o CRM entra por `Estágio`, a produção por `Tarefa`, a aprovação acontece no
-`Item Editorial`, e o WhatsApp conecta conversa a cliente.
+**The spine of the system is `Agency → Client → Plan → Editorial Item`.** The whole operation
+hangs off that path: the CRM enters through `Stage`, production through `Task`, approval happens
+on the `Editorial Item`, and WhatsApp connects a conversation to a client.
 
-Escopo por agência é aplicado no schema: cada entidade de topo carrega o vínculo com a agência
-dona, e nenhuma consulta atravessa esse limite.
-
----
-
-## Duas decisões que definem o sistema
-
-### Três camadas de identidade, de propósito
-
-A agência autentica por NextAuth. O cliente final tem sessão própria com senha: porque ele
-**não deve existir como usuário da plataforma**: não vê o painel, não ocupa assento, não tem
-permissão a gerenciar. E os links por token servem para quem precisa ver ou responder uma coisa
-só, sem criar conta.
-
-Unificar tudo num sistema de auth seria mais simples de construir e pior de usar. A fronteira
-entre "quem opera" e "quem aprova" é de produto, não de implementação: e ficou explícita na
-arquitetura em vez de virar checagem de papel espalhada por cada tela.
-
-### O WhatsApp é um servidor auto-hospedado, por conta de margem
-
-A primeira versão foi um motor próprio com Baileys, rodando local. Funcionava: e caía toda vez
-que a máquina desligava. Sessão persistente de WhatsApp precisa de um host que não durma, e isso
-não é resolvível com esforço: é requisito de infraestrutura.
-
-A troca não foi para um provedor pago, e o motivo é de negócio, não técnico:
-
-> Provedor tipo Z-API cobra **por número** (~R$100/mês cada). Numa plataforma cujo papel é
-> fornecer a conexão de WhatsApp para todos os seus clientes, preço por unidade estoura a
-> margem assim que a base cresce. Um servidor próprio segura dezenas de números por custo fixo.
-
-Hoje é um servidor **Evolution auto-hospedado**, com uma instância por conta e o webhook
-apontando de volta para a aplicação.
-
-**Trade-off:** infraestrutura própria para monitorar, em troca de um custo que não cresce com a
-base. Foi a decisão de custo unitário que determinou a arquitetura, não o contrário.
+Per-agency scope is enforced in the schema: every top-level entity carries the link to the
+agency that owns it, and no query crosses that boundary.
 
 ---
 
-## Como as proteções apareceram
+## Two decisions that define the system
 
-Nenhuma das proteções abaixo nasceu de checklist. Elas vieram de um hábito: a cada frente
-entregue, submeter o próprio código a uma **revisão adversarial feita com IA**: a pergunta não
-era "está funcionando?", e sim *"como alguém quebraria isso?"*.
+### Three identity layers, on purpose
 
-A IA levantava os candidatos. **A triagem era minha:** o que era achado real e o que era falso
-positivo, o que era grave e o que podia esperar, e em que ordem corrigir. O histórico do
-repositório mostra o padrão: rodadas de varredura seguidas de commits que fecham os achados por
-severidade, dos graves primeiro.
+The agency authenticates through NextAuth. The agency's client gets a session of its own with a
+password, because that person **should not exist as a platform user**: they do not see the
+dashboard, do not take up a seat, do not get management permissions. And token links serve
+whoever needs to see or answer one single thing, without creating an account.
 
-Foi numa dessas rodadas que apareceu a falha de **segurança entre contas** que originou a regra
-de ouro da nomenclatura de instância, descrita abaixo. Ela não teria aparecido em teste de uso:
-o produto funcionava perfeitamente para quem não estivesse tentando invadir o vizinho.
+Folding all of it into one auth system would have been simpler to build and worse to use. The
+boundary between "who operates" and "who approves" is a product boundary, not an implementation
+detail, so it is explicit in the architecture instead of becoming a role check scattered across
+every screen.
 
-Vale dizer o que isso significa na prática: **as proteções não estão aqui porque eu sabia que
-precisava delas.** Estão porque eu procurei o que estava errado depois de achar que tinha
-terminado, e achei.
+### The WhatsApp server is self-hosted, and the reason is margin
+
+The first version was a custom engine on Baileys, running locally. It worked, and it went down
+every time the machine shut off. A persistent WhatsApp session needs a host that does not sleep,
+and that is not solvable with effort: it is an infrastructure requirement.
+
+The move was not to a paid provider, and the reason is commercial, not technical:
+
+> A provider like Z-API charges **per number** (~R$100/month each). On a platform whose job is
+> to supply the WhatsApp connection for all of its customers, per-unit pricing destroys the
+> margin as soon as the base grows. A server of your own holds dozens of numbers at a fixed
+> cost.
+
+Today it is a **self-hosted Evolution server**, one instance per account, with the webhook
+pointing back at the application.
+
+**Trade-off:** infrastructure of my own to monitor, in exchange for a cost that does not grow
+with the customer base. Unit cost determined the architecture, not the other way around.
 
 ---
 
-## Segurança
+## How the protections came about
 
-Decisões tomadas durante a construção:
+None of the protections below came from a checklist. They came from a habit: after every
+delivered area, I put my own code through an **adversarial review run with AI**, where the
+question was not "does it work?" but *"how would someone break this?"*.
 
-- **Segredos nunca versionados**, `.env*` ignorado desde o início; em 285 commits, nenhum
-  arquivo de ambiente ou chave entrou no repositório
-- **Chave de serviço só no servidor**, nunca exposta ao cliente
-- **Dados pessoais fora do código**, a lista de acesso vive em variável de ambiente, e falha
-  fechada se não estiver definida
-- **Senha com bcrypt**, nunca em texto puro
-- **Limite de tentativas de login** por identificador e IP
-- **Proteção contra enumeração de contas** no portal do cliente
+The AI raised the candidates. **The triage was mine:** what was a real finding and what was a
+false positive, what was serious and what could wait, and in what order to fix. The repository
+history shows the pattern: sweeps followed by commits that close the findings by severity,
+worst first.
 
-O último merece o código, porque é o tipo de coisa que só aparece quando se pensa em superfície
-de ataque:
+It was during one of those rounds that the **cross-account security flaw** appeared, the one
+that produced the instance-naming golden rule described below. It would never have shown up in
+usage testing: the product worked perfectly for anyone who was not trying to break into the
+neighbor's account.
+
+Worth saying plainly what that means: **the protections are not here because I knew I needed
+them.** They are here because I went looking for what was wrong after I thought I was done, and
+found it.
+
+---
+
+## Security
+
+Decisions taken during construction:
+
+- **Secrets never versioned**, `.env*` ignored from the start; across 285 commits, no
+  environment file or key ever entered the repository
+- **Service key stays on the server**, never exposed to the client
+- **Personal data out of the code**, the access list lives in an environment variable and fails
+  closed when it is not defined
+- **Passwords with bcrypt**, never in plain text
+- **Login attempt limiting** per identifier and IP
+- **Account enumeration protection** in the client portal
+
+The last one deserves the code, because it is the kind of thing that only shows up when you
+think about attack surface (comments translated, identifiers kept as they are in the source):
 
 ```ts
-/** Hash descartável: quando o e-mail não existe, ainda assim gastamos o tempo de um
- *  bcrypt. Sem isso, "responde rápido" vira um jeito de descobrir quais e-mails
- *  têm conta. */
+/** Throwaway hash: when the email does not exist, we still spend the time of a
+ *  bcrypt. Without this, "responds fast" becomes a way to find out which emails
+ *  have an account. */
 const HASH_FALSO = "$2a$12$..."
 ```
 
 ```ts
-// Resposta idêntica para e-mail inexistente, conta desativada e senha errada:
-// distinguir os casos entregaria quem é cliente de quem.
+// Identical response for a nonexistent email, a disabled account and a wrong password:
+// telling the cases apart would hand over who is a client.
 const errada = NextResponse.json({ error: "E-mail ou senha incorretos." }, { status: 401 })
 ```
 
-Login que responde rápido para e-mail inexistente e devagar para e-mail existente entrega a lista
-de quem tem conta. Num produto B2B, isso significa entregar a carteira de clientes da agência.
+A login that answers fast for a nonexistent email and slowly for an existing one hands over the
+list of who has an account. In a B2B product, that means handing over the agency's client book.
 
-E, no multi-inquilino, a superfície mais perigosa é o vizinho:
+And in multi-tenant, the most dangerous surface is the neighbor:
 
 ```ts
 /**
- * REGRA DE OURO: o nome da instância é SEMPRE derivado do dataId da sessão,
- * nunca lido do banco. O nome é previsível (`regma_<dataId>`), então confiar num
- * campo gravável deixaria um inquilino apontar para a conexão de outro: e
- * enviar mensagem pelo número alheio ou pedir o QR dele.
+ * GOLDEN RULE: the instance name is ALWAYS derived from the session's dataId,
+ * never read from the database. The name is predictable (`regma_<dataId>`), so
+ * trusting a writable field would let one tenant point at another tenant's
+ * connection, and send messages from someone else's number or request their QR.
  */
 ```
 
-Identificador de recurso derivado da sessão, nunca de campo que o próprio usuário escreve. Sem
-isso, uma agência poderia sequestrar a conexão de WhatsApp de outra.
+A resource identifier derived from the session, never from a field the user writes. Without
+that, one agency could hijack another agency's WhatsApp connection.
 
-### Pendente antes do uso com dados de terceiros
-- [ ] Revisão completa de isolamento entre tenants
-- [ ] Auditoria das políticas de acesso ao storage
-- [ ] Revisão de expiração e escopo dos links por token
+### Open before use with third-party data
+- [ ] Full review of tenant isolation
+- [ ] Audit of storage access policies
+- [ ] Review of token link expiry and scope
 
-O escopo por usuário está aplicado no schema, mas ainda não foi auditado ponta a ponta: e
-enquanto isso não acontecer, não entra em uso com dado real de cliente.
+Per-user scope is enforced in the schema, but it has not been audited end to end, and until that
+happens it does not go into use with real client data.
 
 ---
 
 ## Status
 
-Em desenvolvimento ativo. O núcleo está construído e navegável; faltam ajustes, a revisão de
-segurança acima e o lançamento.
+In active development. The core is built and navigable; what is left is polish, the security
+review above, and launch.
 
 ---
 
 **Gabriella Grecco** · [LinkedIn](https://linkedin.com/in/gabriellagrecco)
-Código-fonte privado, acesso mediante solicitação.
+Source code private, access on request.

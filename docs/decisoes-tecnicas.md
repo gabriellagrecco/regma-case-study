@@ -1,5 +1,7 @@
 # Decisões técnicas e trade-offs
 
+[🇺🇸 English](technical-decisions.md) · 🇧🇷 Português
+
 ---
 
 ## Postgres com Prisma, e não apenas o cliente do Supabase
